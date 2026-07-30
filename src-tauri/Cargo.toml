@@ -5,6 +5,10 @@ description = "InterStellar Secure Decentralized Mesh Messenger & AI Defense"
 authors = ["Reiclid"]
 edition = "2021"
 
+[lib]
+name = "interstellar"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2.0.0-rc", features = [] }
 

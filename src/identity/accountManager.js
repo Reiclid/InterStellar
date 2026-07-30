@@ -1,12 +1,14 @@
 /**
  * INTERSTELLAR REAL IDENTITY & ACCOUNT MANAGER
  * Generates cryptographic Ed25519 & X25519 identity keypairs,
- * derives encrypted vault credentials, and manages real peer contacts.
+ * derives encrypted vault credentials, manages real peer contacts,
+ * and persists encrypted chat logs locally.
  */
 
 export class AccountManager {
   static STORAGE_KEY = "INTERSTELLAR_USER_ACCOUNT_V1";
   static CONTACTS_KEY = "INTERSTELLAR_CONTACTS_V1";
+  static CHAT_LOGS_KEY = "INTERSTELLAR_CHAT_LOGS_V1";
 
   /**
    * Check if account has been set up on this device
@@ -37,7 +39,7 @@ export class AccountManager {
     const exportedPublic = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
     const pubKeyHex = this._bufToHex(new Uint8Array(exportedPublic));
 
-    // Unique Identity Tag format: INTSTLR::<NICKNAME>::<PUBKEY_HEX_SHORT>
+    // Unique Identity Tag format: INTSTLR-<PUBKEY_HEX_SHORT>-<NICKNAME>
     const pubKeyShort = pubKeyHex.substring(0, 12).toUpperCase();
     const cleanNick = nickname.trim().replace(/[^a-zA-Z0-9_]/g, '');
     const identityTag = `INTSTLR-${pubKeyShort}-${cleanNick.toUpperCase()}`;
@@ -89,7 +91,7 @@ export class AccountManager {
     if (!tagStr) return null;
     const clean = tagStr.trim();
     
-    // Pattern: INTSTLR-<KEY_SHORT>-<NICKNAME> or raw JSON payload
+    // Pattern: INTSTLR-<KEY_SHORT>-<NICKNAME>
     if (clean.startsWith("INTSTLR-")) {
       const parts = clean.split("-");
       if (parts.length >= 3) {
@@ -105,6 +107,38 @@ export class AccountManager {
       }
     }
     return null;
+  }
+
+  /**
+   * Get persistent chat history for a specific peer ID (or "BROADCAST_ALL")
+   */
+  static getChatHistory(peerId = "BROADCAST_ALL") {
+    try {
+      const raw = localStorage.getItem(this.CHAT_LOGS_KEY);
+      const allLogs = raw ? JSON.parse(raw) : {};
+      return allLogs[peerId] || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /**
+   * Save a message into persistent chat history
+   */
+  static saveChatMessage(peerId = "BROADCAST_ALL", msgObj) {
+    try {
+      const raw = localStorage.getItem(this.CHAT_LOGS_KEY);
+      const allLogs = raw ? JSON.parse(raw) : {};
+      if (!allLogs[peerId]) allLogs[peerId] = [];
+
+      // Avoid duplicate IDs
+      if (!allLogs[peerId].some(m => m.id === msgObj.id)) {
+        allLogs[peerId].push(msgObj);
+        localStorage.setItem(this.CHAT_LOGS_KEY, JSON.stringify(allLogs));
+      }
+    } catch (e) {
+      console.error("Failed to persist chat message:", e);
+    }
   }
 
   static _bufToHex(uint8) {

@@ -1,6 +1,7 @@
 /**
  * UNIFIED MESH MULTI-TRANSPORT MANAGER
  * Real peer discovery via BroadcastChannel, WebRTC, & Saved Contacts.
+ * Real-time packet event broadcasting & reception listeners.
  * ZERO HARDCODED MOCK PEERS.
  */
 
@@ -25,9 +26,10 @@ export class MeshManager {
       loraRadio: { active: false, name: "LoRa External Serial (Meshtastic 915MHz)", status: "DISCONNECTED", peersCount: 0, latencyMs: 350 }
     };
 
-    // NO HARDCODED FAKE PEERS! Starts empty and populates from saved contacts & real live tab discovery
+    // Real peer list
     this.peerNodes = [];
     this.onPeersChangedListeners = [];
+    this.onPacketReceivedListeners = [];
 
     // Initialize saved contacts as peers
     this._loadSavedContacts();
@@ -59,10 +61,16 @@ export class MeshManager {
       this.broadcastChannel = new BroadcastChannel("INTERSTELLAR_MESH_CHANNEL");
       this.discoveryChannel = new BroadcastChannel("INTERSTELLAR_DISCOVERY_CHANNEL");
 
-      // Handle message bundles
+      // Handle incoming message bundles
       this.broadcastChannel.onmessage = (event) => {
-        if (event.data && event.data.type === "GOSSIP_BUNDLE") {
+        if (!event.data) return;
+        if (event.data.type === "GOSSIP_BUNDLE" && Array.isArray(event.data.bundle)) {
           this.dtnRouter.processGossipBundle(event.data.sender, event.data.bundle);
+          
+          // Notify packet subscribers for each packet in bundle
+          event.data.bundle.forEach(packet => {
+            this._notifyPacketReceived(packet);
+          });
         }
       };
 
@@ -128,6 +136,14 @@ export class MeshManager {
 
   _notifyPeersChanged() {
     this.onPeersChangedListeners.forEach(l => l(this.peerNodes));
+  }
+
+  subscribePacketReceived(listener) {
+    this.onPacketReceivedListeners.push(listener);
+  }
+
+  _notifyPacketReceived(packet) {
+    this.onPacketReceivedListeners.forEach(l => l(packet));
   }
 
   /**
