@@ -1,7 +1,7 @@
 import React from 'react';
-import { Shield, Radio, Cpu, Lock, RefreshCw, MessageSquare, AlertOctagon } from 'lucide-react';
+import { Shield, Radio, Cpu, Lock, RefreshCw, MessageSquare, AlertOctagon, Share2, UserPlus, User } from 'lucide-react';
 
-export function Header({ activeTab, setActiveTab, onPanicTrigger, isLocked, isDecoy }) {
+export function Header({ activeTab, setActiveTab, onPanicTrigger, isDecoy, account, onShareProfile, onAddContact, peersCount }) {
   return (
     <header className="border-b border-zinc-800 bg-black/90 backdrop-blur sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -14,13 +14,15 @@ export function Header({ activeTab, setActiveTab, onPanicTrigger, isLocked, isDe
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-mono text-sm font-bold tracking-widest text-white uppercase">INTERSTELLAR</h1>
-              {isDecoy ? (
-                <span className="mono-badge text-xs bg-zinc-800 text-zinc-400">DECOY MODE</span>
-              ) : (
-                <span className="mono-badge mono-badge-active text-[10px]">E2EE DOUBLE RATCHET</span>
+              {account && (
+                <span className="mono-badge mono-badge-active text-[10px] uppercase">
+                  {account.nickname}
+                </span>
               )}
             </div>
-            <p className="text-[11px] text-zinc-500 font-mono">DECENTRALIZED MESH // ON-DEVICE AI DEFENSE</p>
+            <p className="text-[11px] text-zinc-500 font-mono">
+              {account ? account.identityTag : "DECENTRALIZED MESH // ON-DEVICE AI DEFENSE"}
+            </p>
           </div>
         </div>
 
@@ -78,10 +80,29 @@ export function Header({ activeTab, setActiveTab, onPanicTrigger, isLocked, isDe
         </nav>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          
+          <button
+            onClick={onShareProfile}
+            className="btn-secondary text-xs px-2.5 py-1.5"
+            title="Share your Identity Tag & QR Code"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>MY ID</span>
+          </button>
+
+          <button
+            onClick={onAddContact}
+            className="btn-secondary text-xs px-2.5 py-1.5"
+            title="Add contact by Identity Tag"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>ADD PEER</span>
+          </button>
+
           <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 font-mono text-[11px]">
-            <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-            <span className="text-zinc-300">4 PEERS ONLINE</span>
+            <span className={`w-2 h-2 rounded-full ${peersCount > 0 ? 'bg-white animate-pulse' : 'bg-zinc-600'}`}></span>
+            <span className="text-zinc-300">{peersCount} PEERS</span>
           </div>
 
           <button
@@ -94,15 +115,6 @@ export function Header({ activeTab, setActiveTab, onPanicTrigger, isLocked, isDe
           </button>
         </div>
 
-      </div>
-
-      {/* Mobile Tab Switcher */}
-      <div className="flex md:hidden overflow-x-auto border-t border-zinc-800 p-2 gap-1 bg-zinc-950">
-        <button onClick={() => setActiveTab('chat')} className={`px-2.5 py-1 text-xs font-mono rounded ${activeTab === 'chat' ? 'bg-white text-black' : 'text-zinc-400'}`}>Chat</button>
-        <button onClick={() => setActiveTab('mesh')} className={`px-2.5 py-1 text-xs font-mono rounded ${activeTab === 'mesh' ? 'bg-white text-black' : 'text-zinc-400'}`}>Mesh</button>
-        <button onClick={() => setActiveTab('ai')} className={`px-2.5 py-1 text-xs font-mono rounded ${activeTab === 'ai' ? 'bg-white text-black' : 'text-zinc-400'}`}>AI</button>
-        <button onClick={() => setActiveTab('security')} className={`px-2.5 py-1 text-xs font-mono rounded ${activeTab === 'security' ? 'bg-white text-black' : 'text-zinc-400'}`}>Vault</button>
-        <button onClick={() => setActiveTab('updater')} className={`px-2.5 py-1 text-xs font-mono rounded ${activeTab === 'updater' ? 'bg-white text-black' : 'text-zinc-400'}`}>Updates</button>
       </div>
     </header>
   );

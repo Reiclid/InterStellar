@@ -6,6 +6,11 @@ import { AiView } from './components/AiView';
 import { SecurityView } from './components/SecurityView';
 import { UpdaterView } from './components/UpdaterView';
 
+import { AccountSetupModal } from './components/AccountSetupModal';
+import { ShareProfileModal } from './components/ShareProfileModal';
+import { AddContactModal } from './components/AddContactModal';
+
+import { AccountManager } from './identity/accountManager';
 import { MeshManager } from './mesh/meshManager';
 import { StylometryAnalyzer } from './ai/stylometry';
 import { SentimentClassifier } from './ai/sentiment';
@@ -14,12 +19,17 @@ import { AntiForensicsEngine } from './security/antiForensics';
 
 export function App() {
   const [activeTab, setActiveTab] = useState('chat');
+  const [account, setAccount] = useState(AccountManager.getAccount());
+  const [showSetupModal, setShowSetupModal] = useState(!AccountManager.hasAccount());
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showAddContactModal, setShowAddContactModal] = useState(false);
+
   const [isDecoy, setIsDecoy] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
 
   // AI & Mesh Engines
-  const meshManagerRef = useRef(new MeshManager());
+  const meshManagerRef = useRef(new MeshManager(account));
   const biometricRef = useRef(new BiometricTypingDefense());
 
   const [aiMetrics, setAiMetrics] = useState({
@@ -29,6 +39,19 @@ export function App() {
   });
 
   const [anomalyScore, setAnomalyScore] = useState(10);
+  const [peersCount, setPeersCount] = useState(meshManagerRef.current.peerNodes.length);
+
+  useEffect(() => {
+    meshManagerRef.current.subscribePeersChanged((peers) => {
+      setPeersCount(peers.length);
+    });
+  }, []);
+
+  const handleAccountCreated = (newAccount) => {
+    setAccount(newAccount);
+    setShowSetupModal(false);
+    meshManagerRef.current = new MeshManager(newAccount);
+  };
 
   const handleKeystroke = (text) => {
     biometricRef.current.recordKeyDown();
@@ -81,8 +104,11 @@ export function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onPanicTrigger={handlePanicTrigger}
-        isLocked={isLocked}
         isDecoy={isDecoy}
+        account={account}
+        onShareProfile={() => setShowShareModal(true)}
+        onAddContact={() => setShowAddContactModal(true)}
+        peersCount={peersCount}
       />
 
       {/* Main Tab Content */}
@@ -92,7 +118,8 @@ export function App() {
             meshManager={meshManagerRef.current}
             onKeystroke={handleKeystroke}
             aiMetrics={aiMetrics}
-            isDecoy={isDecoy}
+            onShareProfile={() => setShowShareModal(true)}
+            onAddContact={() => setShowAddContactModal(true)}
           />
         )}
 
@@ -127,6 +154,27 @@ export function App() {
           <span className="text-zinc-400">REPO: https://github.com/Reiclid/InterStellar</span>
         </div>
       </footer>
+
+      {/* Account Setup Modal (First launch) */}
+      {showSetupModal && (
+        <AccountSetupModal onAccountCreated={handleAccountCreated} />
+      )}
+
+      {/* Share Profile Modal */}
+      {showShareModal && account && (
+        <ShareProfileModal account={account} onClose={() => setShowShareModal(false)} />
+      )}
+
+      {/* Add Contact Modal */}
+      {showAddContactModal && (
+        <AddContactModal
+          onClose={() => setShowAddContactModal(false)}
+          onContactAdded={() => {
+            meshManagerRef.current._loadSavedContacts();
+            setPeersCount(meshManagerRef.current.peerNodes.length);
+          }}
+        />
+      )}
 
       {/* Intruder / Lock Modal */}
       {isLocked && (

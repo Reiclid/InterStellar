@@ -1,30 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Lock, ShieldCheck, QrCode, Volume2, ShieldAlert, Cpu, EyeOff } from 'lucide-react';
+import { Send, Lock, ShieldCheck, QrCode, Volume2, UserPlus, Share2, MessageSquare } from 'lucide-react';
 import { DoubleRatchetSession } from '../crypto/doubleRatchet';
 import { OpticalQrStream } from '../mesh/opticalQr';
 
-export function ChatView({ meshManager, onKeystroke, aiMetrics, isDecoy }) {
-  const [activePeer, setActivePeer] = useState('NODE-ALPHA-82');
-  const [messages, setMessages] = useState([
-    {
-      id: 'm-1',
-      sender: 'NODE-ALPHA-82',
-      text: 'Encrypted Double Ratchet channel initialized over local LAN.',
-      timestamp: '20:01:05',
-      padded: true,
-      ratchetSeq: 1,
-      fingerprint: '8F:3A:9C:21'
-    },
-    {
-      id: 'm-2',
-      sender: 'ME',
-      text: 'Acknowledged. Mesh gossip protocol store-and-forward active.',
-      timestamp: '20:01:42',
-      padded: true,
-      ratchetSeq: 2,
-      fingerprint: '12:E4:B0:99'
-    }
-  ]);
+export function ChatView({ meshManager, onKeystroke, aiMetrics, onShareProfile, onAddContact }) {
+  const [peerNodes, setPeerNodes] = useState(meshManager.peerNodes);
+  const [activePeer, setActivePeer] = useState(meshManager.peerNodes[0]?.id || null);
+  const [messages, setMessages] = useState([]);
 
   const [inputMessage, setInputMessage] = useState('');
   const [applyPadding, setApplyPadding] = useState(true);
@@ -33,13 +15,21 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, isDecoy }) {
   const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
   const [isAudioTransmitting, setIsAudioTransmitting] = useState(false);
 
-  const ratchetSessionRef = useRef(new DoubleRatchetSession('NODE-ALPHA-82'));
+  const ratchetSessionRef = useRef(new DoubleRatchetSession(activePeer || 'LOCAL_NODE'));
   const qrCanvasRef = useRef(null);
   const chatScrollRef = useRef(null);
 
   useEffect(() => {
     ratchetSessionRef.current.initialize();
-  }, []);
+
+    // Subscribe to live peer changes
+    meshManager.subscribePeersChanged((updatedPeers) => {
+      setPeerNodes([...updatedPeers]);
+      if (!activePeer && updatedPeers.length > 0) {
+        setActivePeer(updatedPeers[0].id);
+      }
+    });
+  }, [meshManager, activePeer]);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -72,14 +62,16 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, isDecoy }) {
   const handleSend = async () => {
     if (!inputMessage.trim()) return;
 
+    const recipient = activePeer || "BROADCAST_ALL";
     const encryptedPacket = await ratchetSessionRef.current.encrypt(inputMessage, applyPadding);
     
     // Transmit via Mesh Manager DTN Router
-    meshManager.broadcastPacket(activePeer, encryptedPacket.ciphertext);
+    meshManager.broadcastPacket(recipient, encryptedPacket.ciphertext);
 
     const newMsg = {
       id: `m-${Date.now()}`,
       sender: 'ME',
+      recipient,
       text: inputMessage,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       padded: applyPadding,
@@ -118,29 +110,52 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, isDecoy }) {
       <div className="lg:col-span-1 space-y-4">
         
         {/* Peer Selection List */}
-        <div className="mono-card p-4">
-          <h2 className="text-xs font-mono text-zinc-400 mb-3 tracking-wider uppercase">ACTIVE MESH PEERS</h2>
-          <div className="space-y-2">
-            {meshManager.peerNodes.map((peer) => (
-              <button
-                key={peer.id}
-                onClick={() => setActivePeer(peer.id)}
-                className={`w-full p-3 rounded text-left transition flex items-center justify-between border ${
-                  activePeer === peer.id 
-                    ? 'bg-zinc-900 border-white text-white' 
-                    : 'bg-black/40 border-zinc-800 text-zinc-400 hover:border-zinc-700'
-                }`}
-              >
-                <div>
-                  <div className="font-mono text-xs font-semibold">{peer.id}</div>
-                  <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
-                    {peer.transport} • FP: {peer.keyFingerprint}
-                  </div>
-                </div>
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-              </button>
-            ))}
+        <div className="mono-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-mono text-zinc-400 tracking-wider uppercase">ACTIVE MESH PEERS ({peerNodes.length})</h2>
+            <button onClick={onAddContact} className="text-xs font-mono text-white flex items-center gap-1 hover:underline">
+              <UserPlus className="w-3 h-3" />
+              ADD
+            </button>
           </div>
+
+          {peerNodes.length === 0 ? (
+            <div className="p-4 rounded bg-zinc-950 border border-zinc-800 text-center font-mono text-xs space-y-2">
+              <p className="text-zinc-500 text-[11px]">No active mesh peers detected yet.</p>
+              <div className="flex flex-col gap-2 pt-1">
+                <button onClick={onAddContact} className="btn-secondary text-xs justify-center">
+                  <UserPlus className="w-3.5 h-3.5" />
+                  ADD FRIEND ID
+                </button>
+                <button onClick={onShareProfile} className="btn-secondary text-xs justify-center">
+                  <Share2 className="w-3.5 h-3.5" />
+                  SHARE MY ID
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {peerNodes.map((peer) => (
+                <button
+                  key={peer.id}
+                  onClick={() => setActivePeer(peer.id)}
+                  className={`w-full p-3 rounded text-left transition flex items-center justify-between border ${
+                    activePeer === peer.id 
+                      ? 'bg-zinc-900 border-white text-white' 
+                      : 'bg-black/40 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                  }`}
+                >
+                  <div>
+                    <div className="font-mono text-xs font-semibold">{peer.nickname || peer.id}</div>
+                    <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                      {peer.transport} • {peer.keyFingerprint}
+                    </div>
+                  </div>
+                  <span className={`w-2 h-2 rounded-full ${peer.status === 'ONLINE' ? 'bg-white animate-pulse' : 'bg-zinc-600'}`}></span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* E2EE Double Ratchet Status */}
@@ -157,10 +172,6 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, isDecoy }) {
             <div className="flex justify-between text-zinc-400">
               <span>KEY EXCHANGE:</span>
               <span className="text-white">X3DH Curve25519</span>
-            </div>
-            <div className="flex justify-between text-zinc-400">
-              <span>CIPHER SUITE:</span>
-              <span className="text-white">ChaCha20-Poly1305</span>
             </div>
             <div className="flex justify-between text-zinc-400">
               <span>FORWARD SECRECY:</span>
@@ -195,7 +206,7 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, isDecoy }) {
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
             <div>
-              <h3 className="font-mono text-sm text-white font-bold">{activePeer}</h3>
+              <h3 className="font-mono text-sm text-white font-bold">{activePeer || "MESH BROADCAST (SELECT PEER)"}</h3>
               <p className="text-[10px] text-zinc-500 font-mono">CHANNEL: END-TO-END ENCRYPTED // ZERO METADATA LOGGING</p>
             </div>
           </div>
@@ -223,50 +234,44 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, isDecoy }) {
 
         {/* Message Stream */}
         <div ref={chatScrollRef} className="flex-1 p-4 overflow-y-auto space-y-4 bg-black/30">
-          {messages.map((msg) => {
-            const isMe = msg.sender === 'ME';
-            return (
-              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-lg p-3 rounded.lg border ${
-                    isMe
-                      ? 'bg-zinc-900 border-zinc-700 text-white'
-                      : 'bg-zinc-950 border-zinc-800 text-zinc-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-4 border-b border-zinc-800/80 pb-1.5 mb-2 font-mono text-[10px] text-zinc-500">
-                    <span className="font-semibold text-zinc-400">{msg.sender}</span>
-                    <span>{msg.timestamp}</span>
-                  </div>
-                  <p className="text-sm font-sans leading-relaxed">{msg.text}</p>
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center font-mono text-xs text-zinc-500 space-y-2">
+              <MessageSquare className="w-8 h-8 text-zinc-700" />
+              <p>No messages sent yet on this E2EE Double Ratchet channel.</p>
+              <p className="text-[10px] text-zinc-600">Type a message below to transmit over local P2P Mesh.</p>
+            </div>
+          ) : (
+            messages.map((msg) => {
+              const isMe = msg.sender === 'ME';
+              return (
+                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-lg p-3 rounded-lg border ${
+                      isMe
+                        ? 'bg-zinc-900 border-zinc-700 text-white'
+                        : 'bg-zinc-950 border-zinc-800 text-zinc-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4 border-b border-zinc-800/80 pb-1.5 mb-2 font-mono text-[10px] text-zinc-500">
+                      <span className="font-semibold text-zinc-400">{msg.sender}</span>
+                      <span>{msg.timestamp}</span>
+                    </div>
+                    <p className="text-sm font-sans leading-relaxed">{msg.text}</p>
 
-                  <div className="mt-2.5 pt-1.5 border-t border-zinc-800/50 flex items-center justify-between text-[9px] font-mono text-zinc-500">
-                    <span className="flex items-center gap-1">
-                      <Lock className="w-2.5 h-2.5 text-zinc-400" />
-                      RATCHET #{msg.ratchetSeq}
-                    </span>
-                    {msg.padded && <span className="text-zinc-400">PADDED 256B</span>}
-                    <span>FP: {msg.fingerprint}</span>
+                    <div className="mt-2.5 pt-1.5 border-t border-zinc-800/50 flex items-center justify-between text-[9px] font-mono text-zinc-500">
+                      <span className="flex items-center gap-1">
+                        <Lock className="w-2.5 h-2.5 text-zinc-400" />
+                        RATCHET #{msg.ratchetSeq}
+                      </span>
+                      {msg.padded && <span className="text-zinc-400">PADDED 256B</span>}
+                      <span>FP: {msg.fingerprint}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
-
-        {/* Real-time AI Behavioral Overlay Bar */}
-        {aiMetrics && (
-          <div className="px-4 py-2 bg-zinc-950 border-t border-zinc-800 flex items-center justify-between font-mono text-[11px] text-zinc-400">
-            <div className="flex items-center gap-2">
-              <Cpu className="w-3.5 h-3.5 text-white" />
-              <span>STYLOMETRY: TTR {aiMetrics.stylometry.ttr} | CAPS {aiMetrics.stylometry.capsRatio}% | WPM {aiMetrics.wpm || 48}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>TOXICITY: {aiMetrics.sentiment.toxicityScore}% ({aiMetrics.sentiment.level})</span>
-              <span className={`w-2 h-2 rounded-full ${aiMetrics.sentiment.toxicityScore > 50 ? 'bg-white animate-ping' : 'bg-zinc-600'}`}></span>
-            </div>
-          </div>
-        )}
 
         {/* Input Bar */}
         <div className="p-4 border-t border-zinc-800 bg-zinc-950 flex items-center gap-3">
