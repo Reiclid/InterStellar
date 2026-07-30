@@ -1,30 +1,29 @@
-:root {
-  --bg-primary: #030304;
-  --bg-surface: #0a0a0c;
-  --bg-card: #121215;
-  --bg-hover: #1c1c21;
-  --border-muted: #222226;
-  --border-active: #3f3f46;
-  --text-muted: #80808a;
-  --text-main: #e4e4e7;
-  --text-bright: #ffffff;
-  --accent-white: #ffffff;
-  --font-mono: 'JetBrains Mono', monospace;
-  --font-sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@layer base {
+  :root {
+    --bg-primary: #030304;
+    --bg-surface: #0a0a0c;
+    --bg-card: #121215;
+    --bg-hover: #1c1c21;
+    --border-muted: #222226;
+    --border-active: #3f3f46;
+    --text-muted: #80808a;
+    --text-main: #e4e4e7;
+    --text-bright: #ffffff;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  }
 
-body {
-  background-color: var(--bg-primary);
-  color: var(--text-main);
-  font-family: var(--font-sans);
-  overflow-x: hidden;
-  min-height: 100vh;
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
 }
 
 /* Custom Scrollbars */
@@ -159,35 +158,6 @@ body {
 .mono-input:focus {
   border-color: var(--text-main);
   box-shadow: 0 0 0 1px var(--text-main);
-}
-
-/* Pulse Animations */
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 0.9; transform: scale(1.05); }
-}
-
-.animate-pulse-glow {
-  animation: pulseGlow 2s infinite ease-in-out;
-}
-
-@keyframes scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(1000%); }
-}
-
-.scanline-effect {
-  position: relative;
-  overflow: hidden;
-}
-
-.scanline-effect::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 4px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.4), transparent);
-  animation: scanline 3s linear infinite;
-  pointer-events: none;
 }
 
 /* Badge styles */
