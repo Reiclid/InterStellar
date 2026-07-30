@@ -1,37 +1,39 @@
 import React, { useState, useRef } from 'react';
-import { Lock, ShieldAlert, Key, Image as ImageIcon, Eye, Download, Upload, CheckCircle2 } from 'lucide-react';
+import { Lock, ShieldAlert, Key, Image as ImageIcon, Download, Upload } from 'lucide-react';
 import { SteganographyEngine } from '../crypto/steganography';
 import { SecureVault } from '../crypto/secureStorage';
 
-export function SecurityView({ onPanicTrigger }) {
-  // Steganography state
+interface SecurityViewProps {
+  onPanicTrigger: () => void;
+}
+
+export const SecurityView: React.FC<SecurityViewProps> = ({ onPanicTrigger }) => {
   const [stegoSecretText, setStegoSecretText] = useState('');
-  const [stegoOutputImage, setStegoOutputImage] = useState(null);
-  const [extractedSecret, setExtractedSecret] = useState(null);
+  const [stegoOutputImage, setStegoOutputImage] = useState<string | null>(null);
+  const [extractedSecret, setExtractedSecret] = useState<string | null>(null);
   const [stegoStatus, setStegoStatus] = useState('');
 
-  // Vault state
   const [masterPassword, setMasterPassword] = useState('');
   const [vaultStatus, setVaultStatus] = useState('');
 
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleVaultSetup = async () => {
     if (!masterPassword) return;
     try {
       const derivedKey = await SecureVault.deriveMasterKey(masterPassword, "INTERSTELLAR_SALT");
-      const encryptedVault = await SecureVault.encryptData(
-        { timestamp: Date.now(), contacts: ["NODE-ALPHA-82", "NODE-BRAVO-19"], keys: "E2EE_KEYRING_VALID" },
+      await SecureVault.encryptData(
+        { timestamp: Date.now(), contacts: ["NODE-ALPHA-82"], keys: "E2EE_KEYRING_VALID" },
         derivedKey
       );
       setVaultStatus("Vault derivation complete. PBKDF2 100,000 rounds + AES-GCM-256 key active.");
-    } catch (e) {
+    } catch (e: any) {
       setVaultStatus("Vault setup failed: " + e.message);
     }
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
@@ -42,19 +44,18 @@ export function SecurityView({ onPanicTrigger }) {
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext('2d');
+        if (!ctx) return;
         ctx.drawImage(img, 0, 0);
 
         if (stegoSecretText) {
-          // Embed mode
           try {
             const resultDataUrl = SteganographyEngine.embedMessage(canvas, stegoSecretText);
             setStegoOutputImage(resultDataUrl);
             setStegoStatus("Secret payload embedded successfully into image pixel LSBs!");
-          } catch (err) {
+          } catch (err: any) {
             setStegoStatus("Embedding error: " + err.message);
           }
         } else {
-          // Extract mode
           const result = SteganographyEngine.extractMessage(canvas);
           if (result.success) {
             setExtractedSecret(result.secret);
@@ -65,7 +66,7 @@ export function SecurityView({ onPanicTrigger }) {
           }
         }
       };
-      img.src = event.target.result;
+      img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
   };
@@ -78,7 +79,9 @@ export function SecurityView({ onPanicTrigger }) {
         <div>
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-white" />
-            <h2 className="font-mono text-base font-bold text-white uppercase tracking-wider">ANTI-FORENSICS & HARDENED PROTECTION</h2>
+            <h2 className="font-mono text-base font-bold text-white uppercase tracking-wider">
+              ANTI-FORENSICS & HARDENED PROTECTION
+            </h2>
           </div>
           <p className="text-xs text-zinc-400 font-mono mt-1">
             Zero-Knowledge database vault, image steganography, & instant zeroization duress PIN
@@ -191,7 +194,7 @@ export function SecurityView({ onPanicTrigger }) {
             />
 
             <button
-              onClick={() => fileInputRef.current.click()}
+              onClick={() => fileInputRef.current?.click()}
               className="btn-secondary w-full justify-center"
             >
               <Upload className="w-4 h-4" />
@@ -235,4 +238,4 @@ export function SecurityView({ onPanicTrigger }) {
 
     </div>
   );
-}
+};

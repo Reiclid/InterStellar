@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
 import { ShieldCheck, User, Lock, Key } from 'lucide-react';
 import { AccountManager } from '../identity/accountManager';
+import { UserAccount } from '../types/account';
 
-export function AccountSetupModal({ onAccountCreated }) {
+interface AccountSetupModalProps {
+  onAccountCreated: (account: UserAccount) => void;
+}
+
+export const AccountSetupModal: React.FC<AccountSetupModalProps> = ({ onAccountCreated }) => {
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nickname.trim()) {
       setError("Please enter a nickname.");
@@ -28,7 +33,7 @@ export function AccountSetupModal({ onAccountCreated }) {
     try {
       const account = await AccountManager.createAccount(nickname, password);
       onAccountCreated(account);
-    } catch (err) {
+    } catch (err: any) {
       setError("Account creation error: " + err.message);
       setLoading(false);
     }
@@ -117,4 +122,4 @@ export function AccountSetupModal({ onAccountCreated }) {
       </div>
     </div>
   );
-}
+};

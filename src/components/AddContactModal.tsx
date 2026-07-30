@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 import { UserPlus, X, Check } from 'lucide-react';
 import { AccountManager } from '../identity/accountManager';
+import { PeerContact } from '../types/account';
 
-export function AddContactModal({ onClose, onContactAdded }) {
+interface AddContactModalProps {
+  onClose: () => void;
+  onContactAdded: (contact: PeerContact) => void;
+}
+
+export const AddContactModal: React.FC<AddContactModalProps> = ({ onClose, onContactAdded }) => {
   const [identityInput, setIdentityInput] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const handleAdd = (e) => {
+  const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!identityInput.trim()) return;
 
@@ -19,7 +25,7 @@ export function AddContactModal({ onClose, onContactAdded }) {
         onContactAdded(contact);
         onClose();
       }, 1200);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message);
     }
   };
@@ -74,4 +80,4 @@ export function AddContactModal({ onClose, onContactAdded }) {
       </div>
     </div>
   );
-}
+};

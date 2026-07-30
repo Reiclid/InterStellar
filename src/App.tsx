@@ -16,10 +16,12 @@ import { StylometryAnalyzer } from './ai/stylometry';
 import { SentimentClassifier } from './ai/sentiment';
 import { BiometricTypingDefense } from './ai/biometricTyping';
 import { AntiForensicsEngine } from './security/antiForensics';
+import { UserAccount, PeerContact } from './types/account';
+import { AiMetrics } from './types/ai';
 
-export function App() {
+export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('chat');
-  const [account, setAccount] = useState(AccountManager.getAccount());
+  const [account, setAccount] = useState<UserAccount | null>(AccountManager.getAccount());
   const [showSetupModal, setShowSetupModal] = useState(!AccountManager.hasAccount());
   const [showShareModal, setShowShareModal] = useState(false);
   const [showAddContactModal, setShowAddContactModal] = useState(false);
@@ -29,10 +31,10 @@ export function App() {
   const [pinInput, setPinInput] = useState('');
 
   // AI & Mesh Engines
-  const meshManagerRef = useRef(new MeshManager(account));
-  const biometricRef = useRef(new BiometricTypingDefense());
+  const meshManagerRef = useRef<MeshManager>(new MeshManager(account));
+  const biometricRef = useRef<BiometricTypingDefense>(new BiometricTypingDefense());
 
-  const [aiMetrics, setAiMetrics] = useState({
+  const [aiMetrics, setAiMetrics] = useState<AiMetrics>({
     stylometry: StylometryAnalyzer.analyzeText(''),
     sentiment: SentimentClassifier.analyze(''),
     wpm: 52
@@ -42,18 +44,18 @@ export function App() {
   const [peersCount, setPeersCount] = useState(meshManagerRef.current.peerNodes.length);
 
   useEffect(() => {
-    meshManagerRef.current.subscribePeersChanged((peers) => {
+    meshManagerRef.current.subscribePeersChanged((peers: any) => {
       setPeersCount(peers.length);
     });
   }, []);
 
-  const handleAccountCreated = (newAccount) => {
+  const handleAccountCreated = (newAccount: UserAccount) => {
     setAccount(newAccount);
     setShowSetupModal(false);
     meshManagerRef.current = new MeshManager(newAccount);
   };
 
-  const handleKeystroke = (text) => {
+  const handleKeystroke = (text: string) => {
     biometricRef.current.recordKeyDown();
 
     const stylometry = StylometryAnalyzer.analyzeText(text);
@@ -150,7 +152,7 @@ export function App() {
       {/* Footer */}
       <footer className="border-t border-zinc-900 bg-black/90 py-4 font-mono text-center text-xs text-zinc-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>INTERSTELLAR MESH // TAURI v2 + HTML5 + STYLED MONOCHROME</span>
+          <span>INTERSTELLAR MESH // TAURI v2 + TSX + RECHARTS ANALYTICS</span>
           <span className="text-zinc-400">REPO: https://github.com/Reiclid/InterStellar</span>
         </div>
       </footer>
@@ -169,7 +171,7 @@ export function App() {
       {showAddContactModal && (
         <AddContactModal
           onClose={() => setShowAddContactModal(false)}
-          onContactAdded={() => {
+          onContactAdded={(contact: PeerContact) => {
             meshManagerRef.current._loadSavedContacts();
             setPeersCount(meshManagerRef.current.peerNodes.length);
           }}
@@ -210,4 +212,4 @@ export function App() {
 
     </div>
   );
-}
+};

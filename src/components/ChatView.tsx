@@ -2,27 +2,53 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, Lock, ShieldCheck, QrCode, Volume2, UserPlus, Share2, MessageSquare } from 'lucide-react';
 import { DoubleRatchetSession } from '../crypto/doubleRatchet';
 import { OpticalQrStream } from '../mesh/opticalQr';
+import { MeshManager } from '../mesh/meshManager';
+import { AiMetrics } from '../types/ai';
 
-export function ChatView({ meshManager, onKeystroke, aiMetrics, onShareProfile, onAddContact }) {
+interface MessageItem {
+  id: string;
+  sender: string;
+  recipient: string;
+  text: string;
+  timestamp: string;
+  padded: boolean;
+  ratchetSeq: number;
+  fingerprint: string;
+}
+
+interface ChatViewProps {
+  meshManager: MeshManager;
+  onKeystroke: (text: string) => void;
+  aiMetrics: AiMetrics;
+  onShareProfile: () => void;
+  onAddContact: () => void;
+}
+
+export const ChatView: React.FC<ChatViewProps> = ({
+  meshManager,
+  onKeystroke,
+  aiMetrics,
+  onShareProfile,
+  onAddContact
+}) => {
   const [peerNodes, setPeerNodes] = useState(meshManager.peerNodes);
-  const [activePeer, setActivePeer] = useState(meshManager.peerNodes[0]?.id || null);
-  const [messages, setMessages] = useState([]);
+  const [activePeer, setActivePeer] = useState<string | null>(meshManager.peerNodes[0]?.id || null);
+  const [messages, setMessages] = useState<MessageItem[]>([]);
 
   const [inputMessage, setInputMessage] = useState('');
   const [applyPadding, setApplyPadding] = useState(true);
   const [showQrModal, setShowQrModal] = useState(false);
-  const [qrFrames, setQrFrames] = useState([]);
+  const [qrFrames, setQrFrames] = useState<any[]>([]);
   const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
   const [isAudioTransmitting, setIsAudioTransmitting] = useState(false);
 
   const ratchetSessionRef = useRef(new DoubleRatchetSession(activePeer || 'LOCAL_NODE'));
-  const qrCanvasRef = useRef(null);
-  const chatScrollRef = useRef(null);
+  const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     ratchetSessionRef.current.initialize();
 
-    // Subscribe to live peer changes
     meshManager.subscribePeersChanged((updatedPeers) => {
       setPeerNodes([...updatedPeers]);
       if (!activePeer && updatedPeers.length > 0) {
@@ -37,9 +63,8 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, onShareProfile, 
     }
   }, [messages]);
 
-  // QR Stream Animation Timer
   useEffect(() => {
-    let interval;
+    let interval: any;
     if (showQrModal && qrFrames.length > 0) {
       interval = setInterval(() => {
         setCurrentFrameIdx((prev) => (prev + 1) % qrFrames.length);
@@ -54,7 +79,7 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, onShareProfile, 
     }
   }, [showQrModal, currentFrameIdx, qrFrames]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputMessage(e.target.value);
     if (onKeystroke) onKeystroke(e.target.value);
   };
@@ -65,10 +90,9 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, onShareProfile, 
     const recipient = activePeer || "BROADCAST_ALL";
     const encryptedPacket = await ratchetSessionRef.current.encrypt(inputMessage, applyPadding);
     
-    // Transmit via Mesh Manager DTN Router
     meshManager.broadcastPacket(recipient, encryptedPacket.ciphertext);
 
-    const newMsg = {
+    const newMsg: MessageItem = {
       id: `m-${Date.now()}`,
       sender: 'ME',
       recipient,
@@ -83,7 +107,7 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, onShareProfile, 
     setInputMessage('');
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') handleSend();
   };
 
@@ -112,7 +136,9 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, onShareProfile, 
         {/* Peer Selection List */}
         <div className="mono-card p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-mono text-zinc-400 tracking-wider uppercase">ACTIVE MESH PEERS ({peerNodes.length})</h2>
+            <h2 className="text-xs font-mono text-zinc-400 tracking-wider uppercase">
+              ACTIVE MESH PEERS ({peerNodes.length})
+            </h2>
             <button onClick={onAddContact} className="text-xs font-mono text-white flex items-center gap-1 hover:underline">
               <UserPlus className="w-3 h-3" />
               ADD
@@ -317,4 +343,4 @@ export function ChatView({ meshManager, onKeystroke, aiMetrics, onShareProfile, 
 
     </div>
   );
-}
+};

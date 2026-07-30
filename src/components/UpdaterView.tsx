@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCw, Github, CheckCircle2, ShieldCheck, Download, GitCommit, FileText } from 'lucide-react';
 import { GitHubReleaseUpdater } from '../security/updater';
 
-export function UpdaterView() {
-  const [releaseInfo, setReleaseInfo] = useState(null);
+export const UpdaterView: React.FC = () => {
+  const [releaseInfo, setReleaseInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [updateStatus, setUpdateStatus] = useState('');
 
@@ -33,7 +33,9 @@ export function UpdaterView() {
         <div>
           <div className="flex items-center gap-2">
             <Github className="w-5 h-5 text-white" />
-            <h2 className="font-mono text-base font-bold text-white uppercase tracking-wider">AUTOMATED SECURE GITHUB UPDATER</h2>
+            <h2 className="font-mono text-base font-bold text-white uppercase tracking-wider">
+              AUTOMATED SECURE GITHUB UPDATER
+            </h2>
           </div>
           <p className="text-xs text-zinc-400 font-mono mt-1">
             Repo: <a href="https://github.com/Reiclid/InterStellar" target="_blank" rel="noreferrer" className="text-white underline">https://github.com/Reiclid/InterStellar</a>
@@ -113,4 +115,4 @@ export function UpdaterView() {
 
     </div>
   );
-}
+};

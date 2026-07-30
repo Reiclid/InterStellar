@@ -1,10 +1,16 @@
-import React, { useRef, useEffect } from 'react';
-import { Copy, Check, QrCode, X } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Copy, Check, X } from 'lucide-react';
 import { OpticalQrStream } from '../mesh/opticalQr';
+import { UserAccount } from '../types/account';
 
-export function ShareProfileModal({ account, onClose }) {
-  const [copied, setCopied] = React.useState(false);
-  const canvasRef = useRef(null);
+interface ShareProfileModalProps {
+  account: UserAccount;
+  onClose: () => void;
+}
+
+export const ShareProfileModal: React.FC<ShareProfileModalProps> = ({ account, onClose }) => {
+  const [copied, setCopied] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     if (canvasRef.current && account) {
@@ -57,4 +63,4 @@ export function ShareProfileModal({ account, onClose }) {
       </div>
     </div>
   );
-}
+};

@@ -1,7 +1,28 @@
 import React from 'react';
-import { Shield, Radio, Cpu, Lock, RefreshCw, MessageSquare, AlertOctagon, Share2, UserPlus, User } from 'lucide-react';
+import { Radio, Cpu, Lock, RefreshCw, MessageSquare, AlertOctagon, Share2, UserPlus } from 'lucide-react';
+import { UserAccount } from '../types/account';
 
-export function Header({ activeTab, setActiveTab, onPanicTrigger, isDecoy, account, onShareProfile, onAddContact, peersCount }) {
+interface HeaderProps {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  onPanicTrigger: () => void;
+  isDecoy: boolean;
+  account: UserAccount | null;
+  onShareProfile: () => void;
+  onAddContact: () => void;
+  peersCount: number;
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  activeTab,
+  setActiveTab,
+  onPanicTrigger,
+  isDecoy,
+  account,
+  onShareProfile,
+  onAddContact,
+  peersCount
+}) => {
   return (
     <header className="border-b border-zinc-800 bg-black/90 backdrop-blur sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -118,4 +139,4 @@ export function Header({ activeTab, setActiveTab, onPanicTrigger, isDecoy, accou
       </div>
     </header>
   );
-}
+};

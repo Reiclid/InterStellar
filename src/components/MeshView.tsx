@@ -1,16 +1,39 @@
 import React, { useState } from 'react';
-import { Radio, Wifi, Bluetooth, Volume2, QrCode, HardDrive, Cpu, ShieldCheck } from 'lucide-react';
+import { Radio, Wifi, Bluetooth, Volume2, QrCode, HardDrive } from 'lucide-react';
+import { MeshManager } from '../mesh/meshManager';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 
-export function MeshView({ meshManager }) {
+interface MeshViewProps {
+  meshManager: MeshManager;
+}
+
+export const MeshView: React.FC<MeshViewProps> = ({ meshManager }) => {
   const [channels, setChannels] = useState(meshManager.channels);
-  const [routingLog, setRoutingLog] = useState(meshManager.dtnRouter.routingLog);
+  const [routingLog] = useState(meshManager.dtnRouter.routingLog);
 
-  const toggleChannel = (key) => {
+  const toggleChannel = (key: string) => {
     meshManager.toggleTransport(key);
     setChannels({ ...meshManager.channels });
   };
 
   const dtnQueue = meshManager.dtnRouter.exportGossipBundle();
+
+  // Recharts throughput mock timeline data
+  const throughputData = [
+    { time: '20:00', packets: 4, kbps: 12 },
+    { time: '20:05', packets: 8, kbps: 24 },
+    { time: '20:10', packets: 15, kbps: 45 },
+    { time: '20:15', packets: 9, kbps: 28 },
+    { time: '20:20', packets: 22, kbps: 68 },
+    { time: '20:25', packets: dtnQueue.length + 5, kbps: (dtnQueue.length + 5) * 3 }
+  ];
+
+  // Recharts channel latency data
+  const channelLatencyData = Object.keys(channels).map((key) => ({
+    name: key.toUpperCase(),
+    latency: channels[key].latencyMs || 10,
+    active: channels[key].active
+  }));
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -20,7 +43,9 @@ export function MeshView({ meshManager }) {
         <div>
           <div className="flex items-center gap-2">
             <Radio className="w-5 h-5 text-white animate-pulse" />
-            <h2 className="font-mono text-base font-bold text-white uppercase tracking-wider">MULTI-TRANSPORT MESH TOPOLOGY</h2>
+            <h2 className="font-mono text-base font-bold text-white uppercase tracking-wider">
+              MULTI-TRANSPORT MESH TOPOLOGY & TSX ANALYTICS
+            </h2>
           </div>
           <p className="text-xs text-zinc-400 font-mono mt-1">
             Dynamic P2P transport fallback with Delay-Tolerant Network (DTN) Epidemic Gossip Routing
@@ -34,6 +59,49 @@ export function MeshView({ meshManager }) {
             GOSSIP QUEUE: {dtnQueue.length} PKTS
           </div>
         </div>
+      </div>
+
+      {/* Network Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* AreaChart: Packet Throughput */}
+        <div className="mono-card p-5 space-y-3">
+          <h3 className="font-mono text-sm font-bold text-white uppercase">DTN PACKET THROUGHPUT (KB/S)</h3>
+          <div className="h-48 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={throughputData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <XAxis dataKey="time" stroke="#71717a" tick={{ fontSize: 10 }} />
+                <YAxis stroke="#71717a" tick={{ fontSize: 10 }} />
+                <Tooltip
+                  contentStyle={{ background: '#0a0a0c', borderColor: '#27272a', borderRadius: '4px', fontSize: '11px', color: '#fff' }}
+                />
+                <Area type="monotone" dataKey="kbps" stroke="#ffffff" fill="#ffffff" fillOpacity={0.2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* BarChart: Channel Latency */}
+        <div className="mono-card p-5 space-y-3">
+          <h3 className="font-mono text-sm font-bold text-white uppercase">TRANSPORT LATENCY MATRIX (MS)</h3>
+          <div className="h-48 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={channelLatencyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <XAxis dataKey="name" stroke="#71717a" tick={{ fontSize: 9 }} />
+                <YAxis stroke="#71717a" tick={{ fontSize: 10 }} />
+                <Tooltip
+                  contentStyle={{ background: '#0a0a0c', borderColor: '#27272a', borderRadius: '4px', fontSize: '11px', color: '#fff' }}
+                />
+                <Bar dataKey="latency" radius={[4, 4, 0, 0]}>
+                  {channelLatencyData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.active ? '#ffffff' : '#3f3f46'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
       </div>
 
       {/* Transport Channel Matrix */}
@@ -190,7 +258,7 @@ export function MeshView({ meshManager }) {
           {routingLog.length === 0 ? (
             <div className="text-zinc-600 italic">No packet gossip routing events logged yet.</div>
           ) : (
-            routingLog.map((log, idx) => (
+            routingLog.map((log: string, idx: number) => (
               <div key={idx} className="leading-relaxed hover:text-white">
                 {log}
               </div>
@@ -201,4 +269,4 @@ export function MeshView({ meshManager }) {
 
     </div>
   );
-}
+};
