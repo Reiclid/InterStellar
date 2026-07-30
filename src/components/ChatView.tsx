@@ -58,7 +58,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     ratchetSessionRef.current.initialize();
   }, [activePeer]);
 
-  // 2. Peer discovery & Live packet reception subscription
+  // 2. Peer discovery & Live cross-device packet reception subscription
   useEffect(() => {
     meshManager.subscribePeersChanged((updatedPeers) => {
       setPeerNodes([...updatedPeers]);
@@ -70,6 +70,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
       try {
         const payloadData = JSON.parse(packet.payload);
         if (!payloadData || payloadData.sender === meshManager.nodeId) return; // ignore self echo
+
+        const senderId = payloadData.sender;
+        const senderNick = payloadData.senderNick || senderId;
+
+        // Auto-add sender to contact list if valid identity tag
+        if (senderId && senderId.startsWith("INTSTLR-")) {
+          try {
+            AccountManager.addContact(senderId);
+            meshManager._loadSavedContacts();
+            setPeerNodes([...meshManager.peerNodes]);
+          } catch (e) {}
+        }
 
         let text = payloadData.text || packet.payload;
         let ratchetSeq = 0;
@@ -87,8 +99,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
         const incomingMsg: MessageItem = {
           id: payloadData.id || `m-${Date.now()}-${Math.random()}`,
-          sender: payloadData.senderNick || payloadData.sender || 'PEER',
-          senderId: payloadData.sender,
+          sender: senderNick,
+          senderId: senderId,
           recipient: payloadData.recipient || 'BROADCAST_ALL',
           text: text,
           timestamp: payloadData.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -97,12 +109,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
           fingerprint: fingerprint
         };
 
-        const targetStorageKey = payloadData.recipient === 'BROADCAST_ALL' ? 'BROADCAST_ALL' : payloadData.sender;
+        const targetStorageKey = payloadData.recipient === 'BROADCAST_ALL' ? 'BROADCAST_ALL' : senderId;
         AccountManager.saveChatMessage(targetStorageKey, incomingMsg);
 
         // Update state if actively looking at this conversation
         setActivePeer((currentActive) => {
-          if (currentActive === targetStorageKey || currentActive === payloadData.sender) {
+          if (currentActive === targetStorageKey || currentActive === senderId) {
             setMessages((prev) => {
               if (prev.some((m) => m.id === incomingMsg.id)) return prev;
               return [...prev, incomingMsg];
@@ -163,7 +175,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       timestamp: timeStr
     };
 
-    // 1. Transmit over P2P mesh
+    // 1. Transmit over P2P cross-device mesh
     meshManager.broadcastPacket(recipient, JSON.stringify(packetPayload));
 
     // 2. Format UI message object
@@ -239,7 +251,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <Radio className="w-4 h-4 text-white animate-pulse" />
                 <div>
                   <div className="font-mono text-xs font-semibold">GENERAL MESH CHAT</div>
-                  <div className="text-[10px] text-zinc-500 font-mono">Broadcast to all nearby peers</div>
+                  <div className="text-[10px] text-zinc-500 font-mono">Broadcast to PC & Android peers</div>
                 </div>
               </div>
             </button>
